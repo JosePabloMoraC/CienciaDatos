@@ -1,0 +1,86 @@
+---
+title: "Exploración y manipulación automatizada de bases de datos"
+author: "Pablo Mora"
+date: '2022-05-03'
+output: html_document
+---
+### Construcción del data.frame
+```{r}
+Data <- data.frame("id" =c("1", "2", "3"), 
+                   "sexo" = c("M", "F", "F"),
+                   "peso_kg" = c(75,60,80))
+```
+
+### 1) Cálculo del peso promedio desglosado por sexo con las librerías dplyr y data.table   
+
+#### Con librería dplyr   
+```{r message=FALSE, warning=FALSE}
+library(dplyr)
+Data %>% group_by(sexo) %>%  summarise(peso_promedio = mean(peso_kg))
+```
+
+#### Con librería data.table  
+```{r message=FALSE, warning=FALSE}
+library(data.table)
+Dt <- as.data.table(Data) 
+Dt[, list(peso_promedio = mean(peso_kg)), by = sexo]
+```
+
+### 2) Creación de nueva variable “peso_libras con dplyr y data.table
+#### Con librería dplyr
+```{r}
+Data %>% mutate(peso_libras = peso_kg*2.204)
+```
+
+
+#### Con librería data.table  
+```{r}
+Dt[
+  Dt[, .(id, peso_libras = peso_kg*2.204)],
+  on="id"]
+```
+
+### 3) Descargar DB y ordenar ascendentemente para una variable numérica.
+```{r warning=FALSE}
+library(tidyr)
+url <- "http://databank.worldbank.org/data/download/GDP.csv"#Link DB
+download.file(url, destfile = "PIB.csv")                    #Descarga DB
+pibPais = read.csv2("PIB.csv", head = FALSE, sep =",",      #Leer .csv
+                    col.names = c("ID", "Ranking", "NA", "Pais", "PIB", "NA"),
+                    skip=5, nrow = 217, dec = ".", na.strings = " -   ")
+
+pibPais <- pibPais %>%                         
+                    select(!contains("NA")) %>% #Se eliminan las columnas con NA en el nombre. 
+                    drop_na(PIB)                #Se eliminan las filas con NA en PIB
+pibPais$PIB <- as.numeric(gsub(",","",pibPais$PIB)) # Usamos una expresión regular para eliminar la coma de los
+#números y después convertimos la variable a numérica. 
+glimpse(pibPais)                                #Para verificar
+pibPais <- pibPais %>% arrange(PIB)             #Ordenamos ascendentemente según el PIB
+pibPais[27,]                                    #Para consultar el país que se encuentra en la posición 27
+```
+
+### 4) Lectura de .xlsx y graficación
+```{r warning=FALSE}
+library(readxl)
+gapData <- read_excel("gapminder.xlsx", sheet = 1)
+glimpse(gapData)
+paisesInteres <- gapData %>% 
+                filter(country == "Costa Rica" | country == "Singapore") #Nuestros países de interés son Costa 
+#Rica y Singapur 
+
+```  
+
+    
+&nbsp;  
+Se comparará la evolución del PIB de Costa Rica y Singapur con un gráfico de líneas 
+```{r warning=FALSE}
+library(ggplot2)
+ggplot(paisesInteres, aes(year, gdpPercap, colour = country)) +
+        geom_line(lwd=1) +
+        labs(y = "PIB per Capita ($)",
+             x = "Año",
+             colour ="País") +
+        scale_y_continuous(breaks = seq(0, 45000, 5000)) +
+        theme_classic()
+```
+

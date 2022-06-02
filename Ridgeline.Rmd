@@ -1,0 +1,133 @@
+---
+title: "Ridgeline"
+author: "Pablo Mora"
+output: rmdformats::material
+---
+Se usa para comparar distribuciones. 
+**Utilidad:** Para observar cambios en la distribución de una variable continua o discreta a través del tiempo o espacio, aunque también se puede usar para comparar categorías.
+**Limitación:** No es la mejor opción cuando se trabaja con grupos pequeños o cuando los grupos que se quieren comparar no están bien diferenciados. Además, tiene todas las limitaciones de un histograma.
+
+# Datos
+### Cargar librería
+```{r message=FALSE, warning=FALSE}
+library(dplyr)
+```
+
+### Cargar datos
+```{r}
+url <- "https://archive.ics.uci.edu/ml/machine-learning-databases/00360/AirQualityUCI.zip" #Fuente https://archive.ics.uci.edu/ml/datasets/Air+Quality
+download.file(url, destfile = "aire.zip") #Descargar archivo
+unzip("aire.zip") #Descomprimir 
+calidadAire <- read.csv("AirQualityUCI.csv", sep=";", head = TRUE, dec = ",") #Abrir archivo
+head(calidadAire) 
+```
+
+### Manipular base de datos
+```{r}
+co2 <- calidadAire %>% select(Date, Time, CO.GT., T) %>% filter(CO.GT.> -200 & T > -200) #Seleccionar variables de interes: Date, Time, CO.GT. (esta es "True hourly averaged concentration CO in mg/m^3") y T(temperatura).
+                                                                                          #Autores tabularon los NA con "-200".
+
+co2$Time <- as.numeric(gsub(".00.00", "", co2$Time)) #Modificar variable Time para la base sea más sencilla de manipular.
+
+co2 <- co2 %>% mutate(mes = substr(Date, 4,5), .before = Date ) %>% #Crear una nueva variable mes.
+                select(-Date) #Eliminar variable Date ya que no es necesaria.
+
+co2 <- co2 %>% mutate(Luz = if_else(Time >=6 & Time < 18, "Dia", "Noche")) #Crear nueva variable categórica en función de la hora.
+head(co2)
+```
+
+# Graficación 
+### Cargar paquetes necesarios
+```{r warning=FALSE}
+library(ggplot2)
+library(ggridges)
+```
+
+### Gráfico CO2
+```{r}
+ggplot(co2, aes(CO.GT., mes)) +
+  geom_density_ridges()
+```
+
+### Gráfico CO2 según la luz
+```{r}
+ggplot(co2, aes(CO.GT., mes, fill = Luz)) +
+  geom_density_ridges()
+```
+
+### Gráfico temperatura
+```{r}
+ggplot(co2, aes(T, mes)) +
+  geom_density_ridges_gradient()
+```
+
+### Gráfico de temperatura según la Luz
+```{r}
+ggplot(co2, aes(T, mes, fill = Luz)) +
+  geom_density_ridges() +
+  xlim(-5,45)
+```
+
+### Gráfico de temperatura según luz con cuantiles
+```{r}
+ggplot(co2, aes(T, mes, fill = Luz)) +
+  geom_density_ridges() +
+  stat_density_ridges(quantile_lines = TRUE, quantiles = 3)
+```
+
+### Gráfico de temperatura según luz con cuantiles y transparencia
+```{r}
+ggplot(co2, aes(T, mes, fill = Luz)) +
+  geom_density_ridges() +
+  stat_density_ridges(quantile_lines = TRUE, quantiles = 3, alpha = 0.7)
+```
+
+### Gráfico de temperatura con forma de histograma
+```{r}
+ggplot(co2, aes(T, mes, fill = Luz)) +
+      geom_density_ridges(stat = "binline", bins = 25, scale = 2.2)
+```
+
+### Gráfico de temperatura con gradiente
+```{r}
+ggplot(co2, aes(T, mes, fill = stat(x))) +
+  geom_density_ridges_gradient(scale =3, rel_min_height = 0.015) +
+  scale_fill_viridis_c(name = "Temperatura (°C)", option = "C")
+```
+
+### Modificación de los ejes
+```{r}
+ggplot(co2, aes(T, mes, fill = stat(x))) +
+  geom_density_ridges_gradient(scale =3, rel_min_height = 0.001) +
+  scale_fill_viridis_c(name = "Temperatura (°C)", option = "C") +
+  labs(x = "°C") +
+  scale_y_discrete("Mes", labels = c("Enero", "Febrero", "Marzo",
+                                      "Abril", "Mayo", "Junio", 
+                                      "Julio", "Agosto", "Septiembre",
+                                     "Octubre", "Noviembre", "Diciembre")) +
+  theme_light()
+```
+
+# Otras opciones
+```{r warning=FALSE}
+library(palmerpenguins)
+data(penguins)
+```
+
+### Tamaño de puntos según el valor de otra variable
+```{r message=FALSE, warning=FALSE}
+ggplot(penguins, aes(x = bill_length_mm, y = species, fill = species)) +
+  geom_density_ridges(
+    aes(point_shape = species, point_fill = species, point_size = bill_length_mm), 
+    alpha = 0.2, point_alpha = 1, jittered_points = TRUE
+  ) +
+  scale_point_color_hue(l = 40) + scale_point_size_continuous(range = c(0.1, 4)) +
+  scale_discrete_manual(aesthetics = "point_shape", values = c(21, 22, 23))
+```
+
+### Probabilidad de encontrar un valor
+```{r message=FALSE, warning=FALSE}
+ggplot(penguins, aes(x = bill_length_mm, y = species, fill = 0.5 - abs(0.5 - stat(ecdf)))) +
+  stat_density_ridges(geom = "density_ridges_gradient", calc_ecdf = TRUE) +
+  scale_fill_viridis_c(name = "Tail probability", direction = -1)
+```
