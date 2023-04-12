@@ -1,0 +1,46 @@
+---
+title: "Ejercicios Varios"
+author: "Pablo Mora"
+date: "2022-09-29"
+output: html_document
+---
+
+### Ejercicio 1 
+Crear mapas interactivos. 
+```{r warning=FALSE, out.width="100%"}
+library(leaflet)
+mapa <- leaflet()
+mapa <- addTiles(map = mapa)
+mapa <- setView(map = mapa,lng = -83.5666,lat = 8.5428, zoom = 10) # Indicamos el zoom y el sitio donde debe estar el mapa. 
+mapa<- addAwesomeMarkers(map = mapa,lng = -83.5666, lat = 8.5428) # Parque Nacional Corcovado
+mapa<- addAwesomeMarkers(map = mapa,lng = -83.49804, lat = 8.73728) # Reserva Forestal Golfo Dulce
+mapa<- addAwesomeMarkers(map = mapa,lng = -83.2757, lat = 8.6990) # Parque Nacional Piedras Blancas
+mapa
+```
+
+
+### Ejercicio 2 
+Crear tablas interactivas con la librería DT.
+```{r results = "asis", warning=FALSE}
+library(DT)
+datatable(iris)
+
+```
+
+
+### Ejercicio 3 
+Mostrar resultado fuera del bloque de código.
+```{r results = 'asis'}
+resultado <- round(cor(iris$Petal.Length, iris$Petal.Width), digits = 2)
+texto = "• El coeficiente de correlación de Pearson entre largo de pétalo y ancho de pétalo es de "
+#Usamos la función writeLines para evaluar el string como código HTML.
+#Usamos "<i>" y "</i>" para indicar la cursiva. 
+writeLines(paste0("<i>", texto, resultado, '.', "</i>"))
+
+
+```
+<br/><br/>
+<br/><br/>
+
+
+      
